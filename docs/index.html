@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graphsuche – BFS, DFS & Dijkstra</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0f14;--surface:#151820;--surface2:#1e2230;--border:#2a2f42;
+    --accent-bfs:#00e5ff;--accent-dfs:#ff6b35;--accent-visited:#7c3aed;
+    --accent-current:#ffd60a;--text:#e8eaf0;--muted:#6b7280;--green:#22c55e;
+    --dijkstra:#f472b6;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .container{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:40px 24px 80px;}
+  header{text-align:center;margin-bottom:56px;}
+  .tag{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--muted);border:1px solid var(--border);padding:4px 12px;border-radius:2px;margin-bottom:16px;text-transform:uppercase;}
+  h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:12px;}
+  h1 span.bfs{color:var(--accent-bfs);}h1 span.dfs{color:var(--accent-dfs);}h1 span.dijk{color:var(--dijkstra);}
+  .subtitle{color:var(--muted);font-size:1rem;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:32px;margin-bottom:48px;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent-bfs),var(--accent-dfs));}
+  .card.dijk-card::before{background:linear-gradient(90deg,var(--dijkstra),#818cf8);}
+  .section-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:16px;}
+  .card h2{font-size:1.5rem;font-weight:700;margin-bottom:16px;}
+  .card p{color:#b0b8cc;line-height:1.7;margin-bottom:12px;font-size:.95rem;}
+  .graph-types{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px;}
+  .graph-type{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:16px;}
+  .graph-type h4{font-size:.9rem;margin-bottom:6px;color:var(--accent-bfs);}
+  .graph-type p{font-size:.82rem;margin-bottom:0;color:var(--muted);}
+  .terms{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;}
+  .term{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 14px;font-size:.82rem;}
+  .term strong{color:var(--accent-bfs);font-family:'JetBrains Mono',monospace;}
+  .algo-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:48px;}
+  @media(max-width:700px){.algo-grid{grid-template-columns:1fr;}.graph-types{grid-template-columns:1fr;}}
+  .algo-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:28px;position:relative;overflow:hidden;}
+  .algo-card.bfs::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent-bfs);}
+  .algo-card.dfs::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent-dfs);}
+  .algo-card h3{font-size:1.1rem;margin-bottom:4px;}
+  .algo-card.bfs h3{color:var(--accent-bfs);}.algo-card.dfs h3{color:var(--accent-dfs);}
+  .algo-card .full-name{font-size:.75rem;color:var(--muted);margin-bottom:16px;font-family:'JetBrains Mono',monospace;}
+  .algo-card p{font-size:.88rem;color:#b0b8cc;line-height:1.65;margin-bottom:12px;}
+  .badge{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 12px;font-size:.8rem;font-family:'JetBrains Mono',monospace;}
+  .badge.bfs{border-color:var(--accent-bfs);color:var(--accent-bfs);}
+  .badge.dfs{border-color:var(--accent-dfs);color:var(--accent-dfs);}
+  .pseudo{background:#0a0c10;border:1px solid var(--border);border-radius:6px;padding:16px;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.8;color:#9ca3af;}
+  .pseudo .kw{color:#818cf8;}.pseudo .fn{color:var(--accent-bfs);}.pseudo .fn.d{color:var(--accent-dfs);}.pseudo .cmt{color:#374151;}.pseudo .v{color:var(--accent-current);}
+  .viz{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:32px;margin-bottom:48px;position:relative;overflow:hidden;}
+  .viz::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent-bfs),var(--accent-dfs));}
+  .viz.dijk-viz::before{background:linear-gradient(90deg,var(--dijkstra),#818cf8);}
+  .viz h2{font-size:1.3rem;margin-bottom:6px;}
+  .viz .sub{color:var(--muted);font-size:.85rem;margin-bottom:24px;}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px;align-items:center;}
+  button{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;letter-spacing:.05em;padding:8px 18px;border-radius:4px;border:1px solid var(--border);cursor:pointer;transition:all .15s;background:var(--surface2);color:var(--text);}
+  button:hover{background:var(--border);}
+  .btn-bfs{background:rgba(0,229,255,.15);border-color:var(--accent-bfs);color:var(--accent-bfs);}
+  .btn-dfs{background:rgba(255,107,53,.15);border-color:var(--accent-dfs);color:var(--accent-dfs);}
+  .btn-step{border-color:var(--accent-current);color:var(--accent-current);}
+  .btn-step:hover{background:rgba(255,214,10,.1);}
+  .btn-reset{border-color:var(--muted);color:var(--muted);}
+  .btn-dijk{background:rgba(244,114,182,.15);border-color:var(--dijkstra);color:var(--dijkstra);}
+  .btn-finish{border-color:var(--green);color:var(--green);}
+  .canvas-wrap{background:#0a0c10;border:1px solid var(--border);border-radius:6px;margin-bottom:20px;overflow:hidden;}
+  #graphSvg{width:100%;height:320px;display:block;}
+  #valSvg{width:100%;height:400px;display:block;}
+  .state-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;}
+  .state-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+  @media(max-width:600px){.state-row,.state-row-2{grid-template-columns:1fr;}}
+  .sbox{background:#0a0c10;border:1px solid var(--border);border-radius:6px;padding:12px 14px;}
+  .sbox .lbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:6px;}
+  .sbox .val{font-family:'JetBrains Mono',monospace;font-size:.85rem;min-height:20px;word-break:break-all;}
+  .sbox.q .val{color:var(--accent-bfs);}.sbox.s .val{color:var(--accent-dfs);}
+  .sbox.vis .val{color:var(--accent-visited);}.sbox.ord .val{color:var(--green);}
+  .sbox.dp .val{color:var(--dijkstra);}
+  .log{background:#0a0c10;border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:.78rem;min-height:50px;color:var(--muted);}
+  .log .le{padding:2px 0;border-bottom:1px solid var(--border);color:var(--text);}
+  .log .le:last-child{border-bottom:none;}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:16px;}
+  .li{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);}
+  .dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+  /* Dijkstra table */
+  .dtbl-wrap{overflow-x:auto;margin-bottom:16px;}
+  .dtbl{border-collapse:collapse;font-size:.78rem;font-family:'JetBrains Mono',monospace;width:100%;}
+  .dtbl th{padding:6px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--dijkstra);white-space:nowrap;}
+  .dtbl td{padding:6px 10px;border:1px solid var(--border);text-align:center;color:#b0b8cc;white-space:nowrap;}
+  .dtbl tr.cur td{background:rgba(244,114,182,.15);color:var(--dijkstra);font-weight:700;}
+  .dtbl tr.done td{color:#4b5563;}
+  /* compare */
+  .ctbl{width:100%;border-collapse:collapse;font-size:.88rem;}
+  .ctbl th{padding:12px 16px;text-align:left;background:var(--surface2);border:1px solid var(--border);font-size:.8rem;letter-spacing:.05em;}
+  .ctbl th.b{color:var(--accent-bfs);}.ctbl th.d{color:var(--accent-dfs);}
+  .ctbl td{padding:10px 16px;border:1px solid var(--border);color:#b0b8cc;vertical-align:top;line-height:1.5;}
+  .ctbl tr:nth-child(even) td{background:var(--surface2);}
+  .ctbl td:first-child{font-weight:700;color:var(--text);white-space:nowrap;}
+  .footnote{text-align:center;color:var(--muted);font-size:.78rem;margin-top:48px;font-family:'JetBrains Mono',monospace;}
+  .node-selector{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;}
+  .nbtn{padding:5px 12px;font-size:.75rem;border-radius:20px;}
+  .nbtn.sel{background:rgba(244,114,182,.2);border-color:var(--dijkstra);color:var(--dijkstra);}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="tag">Informatik · Algorithmen · Graphen</div>
+  <h1><span class="bfs">Breiten</span>- &amp; <span class="dfs">Tiefen</span>suche &amp; <span class="dijk">Dijkstra</span></h1>
+  <p class="subtitle">Interaktives Lernmittel für den Unterricht</p>
+</header>
+
+<!-- 01 Grundlagen -->
+<div class="card">
+  <div class="section-label">01 — Grundlagen</div>
+  <h2>Was ist ein Graph?</h2>
+  <p>Ein <strong>Graph G = (V, E)</strong> ist eine mathematische Struktur, die aus einer Menge von <strong>Knoten</strong> (Vertices, V) und einer Menge von <strong>Kanten</strong> (Edges, E) besteht. Kanten verbinden jeweils zwei Knoten miteinander und modellieren Beziehungen oder Verbindungen zwischen Objekten.</p>
+  <p>Graphen sind allgegenwärtig: Straßennetze, soziale Netzwerke, das Internet, Stammbäume oder Computernetzwerke lassen sich alle als Graphen darstellen.</p>
+  <div class="graph-types">
+    <div class="graph-type"><h4>Ungerichteter Graph</h4><p>Kanten haben keine Richtung. Die Verbindung (A, B) gilt in beide Richtungen. Beispiel: Freundschaft in sozialen Netzwerken.</p></div>
+    <div class="graph-type"><h4 style="color:var(--accent-dfs)">Gerichteter Graph (Digraph)</h4><p>Kanten haben eine Richtung (Pfeil). A → B bedeutet nicht zwingend B → A. Beispiel: Weblinks, Einbahnstraßen.</p></div>
+  </div>
+  <div class="terms">
+    <div class="term"><strong>Knoten</strong> = Objekt/Punkt</div>
+    <div class="term"><strong>Kante</strong> = Verbindung</div>
+    <div class="term"><strong>Grad</strong> = Anzahl der Kanten eines Knotens</div>
+    <div class="term"><strong>Pfad</strong> = Folge von Knoten über Kanten</div>
+    <div class="term"><strong>Zyklus</strong> = Pfad, der zum Start zurückführt</div>
+    <div class="term"><strong>Gewicht</strong> = Kosten einer Kante</div>
+  </div>
+</div>
+
+<!-- BFS/DFS cards -->
+<div class="algo-grid">
+  <div class="algo-card bfs">
+    <h3>BFS</h3>
+    <div class="full-name">// Breitensuche · Breadth-First Search</div>
+    <p>Die Breitensuche erkundet den Graphen <strong>ebenenweise</strong>: Zuerst alle Nachbarn des Startknotens, dann deren Nachbarn usw.</p>
+    <p>BFS findet immer den <strong>kürzesten Pfad</strong> (nach Kantenanzahl) in ungewichteten Graphen.</p>
+    <div class="badge bfs">📦 Datenstruktur: Queue (FIFO)</div>
+    <div class="pseudo">
+<span class="kw">function</span> <span class="fn">BFS</span>(graph, start):
+  <span class="v">queue</span> ← [start]
+  <span class="v">visited</span> ← {start}
+  <span class="kw">while</span> queue <span class="kw">not</span> empty:
+    <span class="v">node</span> ← queue.<span class="fn">dequeue</span>()
+    besuche(<span class="v">node</span>)
+    <span class="kw">for</span> neighbor <span class="kw">in</span> graph[<span class="v">node</span>]:
+      <span class="kw">if</span> neighbor <span class="kw">not in</span> visited:
+        visited.add(neighbor)
+        queue.enqueue(neighbor)
+    </div>
+  </div>
+  <div class="algo-card dfs">
+    <h3>DFS</h3>
+    <div class="full-name">// Tiefensuche · Depth-First Search</div>
+    <p>Die Tiefensuche verfolgt jeden Pfad so <strong>weit wie möglich</strong>, bevor sie zurückgeht (Backtracking).</p>
+    <p>DFS eignet sich gut für <strong>Zykluserkennung</strong>, topologische Sortierung und Zusammenhangskomponenten.</p>
+    <div class="badge dfs">📚 Datenstruktur: Stack (LIFO)</div>
+    <div class="pseudo">
+<span class="kw">function</span> <span class="fn d">DFS</span>(graph, start):
+  <span class="v">stack</span> ← [start]
+  <span class="v">visited</span> ← {}
+  <span class="kw">while</span> stack <span class="kw">not</span> empty:
+    <span class="v">node</span> ← stack.<span class="fn d">pop</span>()
+    <span class="kw">if</span> <span class="v">node</span> <span class="kw">not in</span> visited:
+      visited.add(<span class="v">node</span>)
+      besuche(<span class="v">node</span>)
+      <span class="kw">for</span> neighbor <span class="kw">in</span> graph[<span class="v">node</span>]:
+        <span class="kw">if</span> neighbor <span class="kw">not in</span> visited:
+          stack.push(neighbor)
+    </div>
+  </div>
+</div>
+
+<!-- BFS/DFS Visualizer -->
+<div class="viz">
+  <div class="section-label">02 — Interaktiv</div>
+  <h2>BFS &amp; DFS Visualisierung</h2>
+  <p class="sub">Wähle einen Algorithmus und klicke schrittweise durch die Ausführung.</p>
+  <div class="controls">
+    <button id="btnBFS" class="btn-bfs" onclick="selectAlgo('bfs')">BFS</button>
+    <button id="btnDFS" onclick="selectAlgo('dfs')">DFS</button>
+    <button class="btn-step" onclick="step()">▶ Nächster Schritt</button>
+    <button class="btn-reset" onclick="resetViz()">↺ Zurücksetzen</button>
+  </div>
+  <div class="canvas-wrap"><svg id="graphSvg" viewBox="0 0 700 300"></svg></div>
+  <div class="state-row">
+    <div class="sbox q" id="structureBox">
+      <div class="lbl" id="structureLabel">Queue (BFS)</div>
+      <div class="val" id="structureValue">—</div>
+    </div>
+    <div class="sbox vis"><div class="lbl">Besucht</div><div class="val" id="visitedValue">—</div></div>
+    <div class="sbox ord"><div class="lbl">Besuchsreihenfolge</div><div class="val" id="orderValue">—</div></div>
+  </div>
+  <div class="log" id="logBox">Wähle einen Algorithmus und starte mit "Nächster Schritt".</div>
+  <div class="legend">
+    <div class="li"><div class="dot" style="background:#1e2230;border:2px solid #4b5563"></div>Unbesucht</div>
+    <div class="li"><div class="dot" style="background:var(--accent-current)"></div>Aktuell</div>
+    <div class="li"><div class="dot" style="background:var(--accent-visited)"></div>Besucht</div>
+    <div class="li"><div class="dot" style="background:var(--green)"></div>Abgeschlossen</div>
+  </div>
+</div>
+
+<!-- Compare -->
+<div class="card">
+  <div class="section-label">03 — Vergleich</div>
+  <h2>BFS vs. DFS auf einen Blick</h2>
+  <table class="ctbl" style="margin-top:20px">
+    <thead><tr><th>Eigenschaft</th><th class="b">BFS</th><th class="d">DFS</th></tr></thead>
+    <tbody>
+      <tr><td>Strategie</td><td>Ebenenweise (breit)</td><td>Pfad-weise (tief)</td></tr>
+      <tr><td>Datenstruktur</td><td>Queue (FIFO)</td><td>Stack (LIFO) / Rekursion</td></tr>
+      <tr><td>Kürzester Pfad</td><td>✅ Ja (ungewichtet)</td><td>❌ Nicht garantiert</td></tr>
+      <tr><td>Speicherbedarf</td><td>Hoch (alle Nachbarn einer Ebene)</td><td>Gering (nur aktueller Pfad)</td></tr>
+      <tr><td>Geeignet für</td><td>Kürzeste Wege, Level-Order</td><td>Zyklen, Topolog. Sortierung, Labyrinth</td></tr>
+      <tr><td>Zeitkomplexität</td><td>O(V + E)</td><td>O(V + E)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 04 Dijkstra Definition -->
+<div class="card dijk-card">
+  <div class="section-label">04 — Kürzeste Wege</div>
+  <h2 style="color:var(--dijkstra)">Dijkstra-Algorithmus</h2>
+  <p>Der Dijkstra-Algorithmus findet den <strong>kürzesten Weg</strong> von einem Startknoten zu allen anderen Knoten in einem <strong>gewichteten Graphen</strong> (mit nicht-negativen Kantengewichten).</p>
+</div>
+
+<!-- 05 Dijkstra Visualizer -->
+<div class="viz dijk-viz">
+  <div class="section-label">05 — Interaktiv: Gewichteter Graph</div>
+  <h2>Dijkstra-Visualisierung</h2>
+  <p class="sub">Graph mit 7 Knoten (A–G) und gewichteten Kanten. Wähle einen Start- und Zielknoten und führe Dijkstra schrittweise aus.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--muted);margin-bottom:8px;">🟢 Startknoten:</div>
+      <div class="node-selector" id="nodeSelector"></div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--green);margin-bottom:8px;">🎯 Zielknoten:</div>
+      <div class="node-selector" id="nodeTarget"></div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="btn-dijk" onclick="dijkStep()">▶ Nächster Schritt</button>
+    <button class="btn-finish" onclick="dijkFinish()">⏩ Fertig berechnen</button>
+    <button class="btn-reset" onclick="dijkReset()">↺ Zurücksetzen</button>
+  </div>
+  <div class="canvas-wrap"><svg id="valSvg" viewBox="0 0 780 380"></svg></div>
+  <div class="dtbl-wrap"><table class="dtbl" id="dijkTable"></table></div>
+  <div class="state-row">
+    <div class="sbox dp"><div class="lbl">Aktueller Knoten</div><div class="val" id="dijkCurrent">—</div></div>
+    <div class="sbox ord"><div class="lbl">Kürzester Weg zum Ziel</div><div class="val" id="dijkPath">—</div></div>
+    <div class="sbox vis"><div class="lbl">Zieldistanz</div><div class="val" id="dijkTargetDist">—</div></div>
+  </div>
+  <div class="log" id="dijkLog">Wähle Start- und Zielknoten, dann starte mit "Nächster Schritt".</div>
+  <div class="legend">
+    <div class="li"><div class="dot" style="background:#1e2230;border:2px solid #4b5563"></div>Unbesucht</div>
+    <div class="li"><div class="dot" style="background:var(--dijkstra)"></div>Aktueller Knoten</div>
+    <div class="li"><div class="dot" style="background:var(--green)"></div>Abgeschlossen</div>
+    <div class="li"><div class="dot" style="background:#ffd60a"></div>Zielknoten</div>
+    <div class="li"><div class="dot" style="background:#818cf8;border-radius:2px;width:20px;height:3px;margin-top:4px"></div>Kürzester-Pfad-Baum</div>
+    <div class="li"><div class="dot" style="background:#ffd60a;border-radius:2px;width:20px;height:3px;margin-top:4px"></div>Kürzester Weg zum Ziel</div>
+  </div>
+</div>
+
+<!-- GitHub Section -->
+<div class="card" style="margin-bottom:32px;">
+  <div class="section-label">06 — Code &amp; Implementierung</div>
+  <h2>Beispiel-Implementierungen auf GitHub</h2>
+  <p>Die vollständigen Implementierungen von BFS, DFS und Dijkstra sind im folgenden Repository verfügbar.</p>
+  <div style="display:flex;align-items:center;gap:16px;margin-top:20px;flex-wrap:wrap;">
+    <a href="https://github.com/fabilhaft22/GraphenUndAlgorithmen" target="_blank" rel="noopener"
+      style="display:inline-flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px 20px;text-decoration:none;color:var(--text);font-weight:700;font-size:.9rem;transition:border-color .15s,background .15s;"
+      onmouseover="this.style.borderColor='#818cf8';this.style.background='rgba(129,140,248,0.1)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface2)'">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      GitHub Repository öffnen
+    </a>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--muted);">https://github.com/fabilhaft22/GraphenUndAlgorithmen</div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;">
+    <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent-bfs)">BFS</span>
+    <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent-dfs)">DFS</span>
+    <span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--dijkstra)">Dijkstra</span>
+  </div>
+</div>
+
+<div class="footnote">// Informatik-Lernmittel · BFS · DFS · Dijkstra</div>
+</div>
+
+<script>
+// ===================== BFS / DFS =====================
+const nodes=[
+  {id:'A',x:100,y:150},{id:'B',x:220,y:70},{id:'C',x:220,y:230},
+  {id:'D',x:360,y:70},{id:'E',x:360,y:230},{id:'F',x:490,y:150},
+  {id:'G',x:610,y:70},{id:'H',x:610,y:230},
+];
+const edges=[['A','B'],['A','C'],['B','D'],['B','E'],['C','E'],['D','F'],['E','F'],['F','G'],['F','H']];
+const adj={};
+nodes.forEach(n=>adj[n.id]=[]);
+edges.forEach(([a,b])=>{adj[a].push(b);adj[b].push(a);});
+
+let algo='bfs', ss=null;
+
+function selectAlgo(a){
+  algo=a;
+  document.getElementById('btnBFS').className=a==='bfs'?'btn-bfs':'';
+  document.getElementById('btnDFS').className=a==='dfs'?'btn-dfs':'';
+  document.getElementById('structureBox').className='sbox '+(a==='bfs'?'q':'s');
+  document.getElementById('structureLabel').textContent=a==='bfs'?'Queue (BFS)':'Stack (DFS)';
+  resetViz();
+}
+function resetViz(){
+  ss=null; renderGraph({},null,[]);
+  ['structureValue','visitedValue','orderValue'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('logBox').textContent='Wähle einen Algorithmus und starte mit "Nächster Schritt".';
+}
+function initSS(){
+  if(algo==='bfs') return{type:'bfs',queue:['A'],visited:new Set(['A']),order:[],done:false,log:['Start: A in Queue, als besucht markiert.']};
+  return{type:'dfs',stack:['A'],visited:new Set(),inStack:new Set(['A']),order:[],done:false,log:['Start: A auf Stack gelegt.']};
+}
+function step(){
+  if(!ss){ss=initSS();renderState();return;}
+  if(ss.done){addLog('✅ Suche abgeschlossen!');return;}
+  ss.type==='bfs'?doBFS():doDFS();
+}
+function doBFS(){
+  const s=ss;
+  if(!s.queue.length){s.done=true;renderGraph(buildMap(s,null),null,s.order);addLog('✅ BFS abgeschlossen!');return;}
+  const node=s.queue.shift(); s.order.push(node);
+  const nb=[];
+  for(const n of adj[node]) if(!s.visited.has(n)){s.visited.add(n);s.queue.push(n);nb.push(n);}
+  s.log.push(`Besuche ${node}. In Queue: [${nb.join(', ')||'–'}]`);
+  renderState(node);
+}
+function doDFS(){
+  const s=ss;
+  if(!s.stack.length){s.done=true;renderGraph(buildMap(s,null),null,s.order);addLog('✅ DFS abgeschlossen!');return;}
+  const node=s.stack.pop(); s.inStack.delete(node);
+  if(s.visited.has(node)){
+    if(s.stack.length) doDFS();
+    else{s.done=true;renderGraph(buildMap(s,null),null,s.order);addLog('✅ DFS abgeschlossen!');}
+    return;
+  }
+  s.visited.add(node); s.order.push(node);
+  const nb=[];
+  for(const n of [...adj[node]].reverse()) if(!s.visited.has(n)&&!s.inStack.has(n)){s.stack.push(n);s.inStack.add(n);nb.push(n);}
+  s.log.push(`Besuche ${node}. Auf Stack: [${[...nb].reverse().join(', ')||'–'}]`);
+  renderState(node);
+}
+function buildMap(s,cur){
+  const m={};
+  s.visited.forEach(v=>m[v]= v===cur?'current':'done');
+  return m;
+}
+function renderState(cur=null){
+  const s=ss;
+  renderGraph(buildMap(s,cur),cur,s.order);
+  document.getElementById('structureValue').textContent=s.type==='bfs'?(s.queue.length?s.queue.join(' → '):'(leer)'):(s.stack.length?'['+[...s.stack].reverse().join(', ')+']':'(leer)');
+  document.getElementById('visitedValue').textContent=[...s.visited].join(', ')||'—';
+  document.getElementById('orderValue').textContent=s.order.join(' → ')||'—';
+  setLog('logBox',s.log);
+}
+function addLog(msg){if(ss){ss.log.push(msg);setLog('logBox',ss.log);}}
+function setLog(id,log){
+  document.getElementById(id).innerHTML=log.slice(-4).reverse().map((l,i)=>`<div class="le" style="opacity:${1-i*.18}">${l}</div>`).join('');
+}
+const COL={
+  default:{fill:'#1e2230',stroke:'#4b5563',text:'#9ca3af'},
+  current:{fill:'#ffd60a',stroke:'#ffd60a',text:'#0d0f14'},
+  visited:{fill:'#7c3aed',stroke:'#7c3aed',text:'#fff'},
+  done:{fill:'#22c55e',stroke:'#22c55e',text:'#0d0f14'},
+};
+function mkEl(tag,attrs){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const[k,v] of Object.entries(attrs))e.setAttribute(k,v);return e;}
+function renderGraph(sm,cur,order){
+  const svg=document.getElementById('graphSvg'); svg.innerHTML='';
+  edges.forEach(([a,b])=>{
+    const na=nodes.find(n=>n.id===a),nb=nodes.find(n=>n.id===b);
+    const sa=sm[a]||'default',sb=sm[b]||'default';
+    const active=sa==='current'||sb==='current',done=sa==='done'&&sb==='done';
+    svg.appendChild(mkEl('line',{x1:na.x,y1:na.y,x2:nb.x,y2:nb.y,stroke:active?'#ffd60a':done?'#22c55e55':'#2a2f42','stroke-width':active?'2.5':'1.5'}));
+  });
+  nodes.forEach(node=>{
+    const st=sm[node.id]||'default',c=COL[st];
+    if(st==='current') svg.appendChild(mkEl('circle',{cx:node.x,cy:node.y,r:'42',fill:algo==='bfs'?'rgba(0,229,255,0.12)':'rgba(255,107,53,0.12)'}));
+    svg.appendChild(mkEl('circle',{cx:node.x,cy:node.y,r:'32',fill:c.fill,stroke:c.stroke,'stroke-width':st==='current'?'3':'2'}));
+    const t=mkEl('text',{x:node.x,y:node.y,'text-anchor':'middle','dominant-baseline':'middle','font-family':'Syne,sans-serif','font-size':'19','font-weight':'750',fill:c.text});
+    t.textContent=node.id; svg.appendChild(t);
+    if(order.includes(node.id)){
+      const b=mkEl('text',{x:node.x+16,y:node.y-14,'text-anchor':'middle','font-family':'JetBrains Mono,monospace','font-size':'10',fill:st==='current'?'#ffd60a':'#9ca3af'});
+      b.textContent=order.indexOf(node.id)+1; svg.appendChild(b);
+
+    }
+  });
+}
+renderGraph({},null,[]);
+
+// ===================== DIJKSTRA =====================
+// Nodes A-G laid out in a clear, readable arrangement
+// A (left), B & C (center-left), D (center), E & F (center-right), G (right)
+const VN=[
+  {id:'A', x:90,  y:190},
+  {id:'B', x:240, y:90},
+  {id:'C', x:240, y:300},
+  {id:'D', x:390, y:190},
+  {id:'E', x:540, y:90},
+  {id:'F', x:540, y:300},
+  {id:'G', x:690, y:190},
+];
+
+// Edges: [nodeA, nodeB, weight]
+// A-B=2, A-C=5, A-D=8, A-G=10, B-C=1, B-D=4, B-E=7, C-D=3, C-F=6, D-E=2, D-F=4, E-G=1, F-G=2
+const VE=[
+  ['A','B',2],
+  ['A','C',5],
+  ['A','D',8],
+  ['A','G',10],
+  ['B','C',1],
+  ['B','D',4],
+  ['B','E',7],
+  ['C','D',3],
+  ['C','F',6],
+  ['D','E',2],
+  ['D','F',4],
+  ['E','G',1],
+  ['F','G',2],
+];
+
+const vadj={};
+VN.forEach(n=>vadj[n.id]=[]);
+VE.forEach(([a,b,w])=>{vadj[a].push({id:b,w});vadj[b].push({id:a,w});});
+
+let dStart='A', dTarget='G', dState=null;
+
+function buildSelector(){
+  [['nodeSelector',false],['nodeTarget',true]].forEach(([elId,isTarget])=>{
+    const sel=document.getElementById(elId); sel.innerHTML='';
+    VN.forEach(n=>{
+      const cur=isTarget?dTarget:dStart;
+      const b=document.createElement('button');
+      b.className='nbtn'+(n.id===cur?' sel':'');
+      b.textContent=n.id;
+      b.onclick=()=>{if(isTarget)dTarget=n.id;else dStart=n.id;buildSelector();dijkReset();};
+      sel.appendChild(b);
+    });
+  });
+}
+
+function dijkReset(){
+  dState=null;
+  renderVal({},null,new Set(),new Set());
+  buildDijkTable({},null,new Set());
+  document.getElementById('dijkCurrent').textContent='—';
+  document.getElementById('dijkPath').textContent='—';
+  document.getElementById('dijkTargetDist').textContent='—';
+  document.getElementById('dijkLog').textContent='Wähle Start- und Zielknoten, dann starte mit "Nächster Schritt".';
+}
+
+function dijkInit(){
+  const dist={},prev={};
+  VN.forEach(n=>{dist[n.id]=Infinity;prev[n.id]=null;});
+  dist[dStart]=0;
+  return{dist,prev,visited:new Set(),pq:[{id:dStart,d:0}],done:false,
+    log:[`Start: ${dStart} = 0 | Ziel: ${dTarget} | alle anderen = ∞`],current:null};
+}
+
+function pqPop(pq){
+  let mi=0;
+  for(let i=1;i<pq.length;i++) if(pq[i].d<pq[mi].d) mi=i;
+  return pq.splice(mi,1)[0];
+}
+
+function dijkStep(){
+  if(!dState){dState=dijkInit();renderDijkState();return;}
+  if(dState.done){setLog('dijkLog',dState.log);return;}
+  const s=dState;
+  while(s.pq.length){
+    const {id}=pqPop(s.pq);
+    if(s.visited.has(id)) continue;
+    s.visited.add(id); s.current=id;
+    const updated=[];
+    for(const {id:nb,w} of vadj[id]){
+      if(s.visited.has(nb)) continue;
+      const neu=s.dist[id]+w;
+      if(neu<s.dist[nb]){s.dist[nb]=neu;s.prev[nb]=id;s.pq.push({id:nb,d:neu});updated.push(`${nb}→${neu}`);}
+    }
+    s.log.push(`Besuche ${id} (Dist: ${s.dist[id]}). Aktualisiert: ${updated.length?updated.join(', '):'–'}`);
+    if(id===dTarget){
+      s.done=true;
+      const p=getPath(s.prev,dTarget);
+      s.log.push(`🎯 Ziel erreicht! ${p.join(' → ')} = ${s.dist[dTarget]}`);
+    } else if(s.visited.size===VN.length||s.pq.length===0){
+      s.done=true;
+    }
+    renderDijkState(); return;
+  }
+  s.done=true; renderDijkState();
+}
+
+function dijkFinish(){
+  if(!dState) dState=dijkInit();
+  while(!dState.done){
+    const s=dState;
+    if(!s.pq.length){s.done=true;break;}
+    while(s.pq.length){
+      const {id}=pqPop(s.pq);
+      if(s.visited.has(id)) continue;
+      s.visited.add(id); s.current=id;
+      const updated=[];
+      for(const {id:nb,w} of vadj[id]){
+        if(s.visited.has(nb)) continue;
+        const neu=s.dist[id]+w;
+        if(neu<s.dist[nb]){s.dist[nb]=neu;s.prev[nb]=id;s.pq.push({id:nb,d:neu});updated.push(`${nb}→${neu}`);}
+      }
+      s.log.push(`Besuche ${id} (Dist: ${s.dist[id]}). Aktualisiert: ${updated.length?updated.join(', '):'–'}`);
+      if(id===dTarget||s.visited.size===VN.length||s.pq.length===0) s.done=true;
+      break;
+    }
+  }
+  dState.current=null;
+  if(dState.dist[dTarget]!==Infinity){
+    const p=getPath(dState.prev,dTarget);
+    dState.log.push(`🎯 Kürzester Weg: ${p.join(' → ')} = ${dState.dist[dTarget]}`);
+  }
+  renderDijkState();
+}
+
+function getPath(prev,target){
+  const p=[]; let c=target;
+  while(c!==null){p.unshift(c);c=prev[c];}
+  return p.length&&p[0]===dStart?p:[];
+}
+
+function targetPathEdgeSet(prev){
+  const s=new Set();
+  const p=getPath(prev,dTarget);
+  for(let i=0;i<p.length-1;i++) s.add(p[i]+'|'+p[i+1]);
+  return s;
+}
+
+function pathEdgeSet(prev){
+  const s=new Set();
+  VN.forEach(n=>{if(prev[n.id]) s.add(n.id+'|'+prev[n.id]);});
+  return s;
+}
+
+function renderDijkState(){
+  const s=dState;
+  const sm={};
+  s.visited.forEach(v=>sm[v]=v===s.current?'current':'done');
+  const pe=pathEdgeSet(s.prev);
+  const te=s.done?targetPathEdgeSet(s.prev):new Set();
+  renderVal(sm,s.current,pe,te);
+  buildDijkTable(s.dist,s.current,s.visited);
+  document.getElementById('dijkCurrent').textContent=s.current?`${s.current} (Dist: ${s.dist[s.current]})`:'—';
+  const tp=getPath(s.prev,dTarget);
+  if(tp.length>0&&s.dist[dTarget]!==Infinity){
+    document.getElementById('dijkPath').textContent=tp.join(' → ')+` = ${s.dist[dTarget]}`;
+    document.getElementById('dijkTargetDist').textContent=s.dist[dTarget];
+  } else {
+    document.getElementById('dijkPath').textContent='noch unbekannt';
+    document.getElementById('dijkTargetDist').textContent='—';
+  }
+  setLog('dijkLog',s.log);
+}
+
+function buildDijkTable(dist,current,visited){
+  const tbl=document.getElementById('dijkTable');
+  const rows=VN.map(n=>{
+    const d=dist[n.id]===undefined||dist[n.id]===Infinity?'∞':dist[n.id];
+    const marker=n.id===dTarget?'🎯 ':n.id===dStart?'🟢 ':'';
+    const cls=n.id===current?'cur':(visited.has&&visited.has(n.id)?'done':'');
+    return`<tr class="${cls}"><td>${marker}${n.id}</td><td>${d}</td></tr>`;
+  }).join('');
+  tbl.innerHTML='<thead><tr><th>Knoten</th><th>Kürzeste Distanz</th></tr></thead><tbody>'+rows+'</tbody>';
+}
+
+function renderVal(sm,current,pathEdges,targetEdges){
+  const svg=document.getElementById('valSvg'); svg.innerHTML='';
+
+  // Draw edges first
+  VE.forEach(([a,b,w])=>{
+    const na=VN.find(n=>n.id===a),nb=VN.find(n=>n.id===b);
+    const isTgt=targetEdges.has(a+'|'+b)||targetEdges.has(b+'|'+a);
+    const isPth=!isTgt&&(pathEdges.has(a+'|'+b)||pathEdges.has(b+'|'+a));
+    const line=mkEl('line',{x1:na.x,y1:na.y,x2:nb.x,y2:nb.y,
+      stroke:isTgt?'#ffd60a':isPth?'#818cf8':'#2a2f42',
+      'stroke-width':isTgt?'4':isPth?'2.5':'1.5'});
+    svg.appendChild(line);
+
+    // Weight label — offset perpendicular to edge
+    const mx=(na.x+nb.x)/2,my=(na.y+nb.y)/2;
+    const dx=nb.y-na.y,dy=na.x-nb.x,len=Math.sqrt(dx*dx+dy*dy)||1;
+    const ox=dx/len*13,oy=dy/len*13;
+
+    // Background pill for weight
+    const wbg=mkEl('rect',{x:mx+ox-11,y:my+oy-9,width:22,height:16,rx:'4',
+      fill:'#0a0c10',stroke:isTgt?'#ffd60a':isPth?'#818cf8':'#2a2f42','stroke-width':'1'});
+    svg.appendChild(wbg);
+
+    const wt=mkEl('text',{x:mx+ox,y:my+oy+4,'text-anchor':'middle','font-family':'JetBrains Mono,monospace','font-size':'11',
+      fill:isTgt?'#ffd60a':isPth?'#818cf8':'#6b7280'});
+    wt.textContent=w; svg.appendChild(wt);
+  });
+
+  // Draw nodes
+  VN.forEach(node=>{
+    const st=sm[node.id]||'default';
+    const isCur=st==='current',isDone=st==='done';
+    const isTgt=node.id===dTarget;
+    const fill=isCur?'#f472b6':isDone?'#22c55e':'#1e2230';
+    const stroke=isTgt?'#ffd60a':isCur?'#f472b6':isDone?'#22c55e':'#4b5563';
+    const tc=isCur||isDone?'#0d0f14':'#e8eaf0';
+    if(isCur) svg.appendChild(mkEl('circle',{cx:node.x,cy:node.y,r:'42',fill:'rgba(0,229,255,0.12)'}));
+    if(isTgt) svg.appendChild(mkEl('circle',{cx:node.x,cy:node.y,r:'40',fill:'rgba(255,107,53,0.12)',stroke:'#ffd60a','stroke-width':'1.5','stroke-dasharray':'5,3'}));
+    svg.appendChild(mkEl('circle',{cx:node.x,cy:node.y,r:'32',fill,stroke,'stroke-width':isCur||isTgt?'3':'2'}));
+    const t=mkEl('text',{x:node.x,y:node.y,'text-anchor':'middle','dominant-baseline':'middle','font-family':'Syne,sans-serif','font-size':'19','font-weight':'750',fill:tc});
+    t.textContent=node.id; svg.appendChild(t);
+
+    // Distance badge (top right of node)
+    if(dState&&dState.dist[node.id]!==undefined&&dState.dist[node.id]!==Infinity){
+      const dval=dState.dist[node.id];
+      svg.appendChild(mkEl('rect',{x:node.x+14,y:node.y-40,width:34,height:18,rx:'4',fill:'#0a0c10',stroke:isCur?'#f472b6':isDone?'#22c55e':'#818cf8','stroke-width':'1'}));
+      const db=mkEl('text',{x:node.x+31,y:node.y-27,'text-anchor':'middle','font-family':'JetBrains Mono,monospace','font-size':'11','font-weight':'700',
+        fill:isCur?'#f472b6':isDone?'#22c55e':'#818cf8'});
+      db.textContent=dval; svg.appendChild(db);
+    }
+  });
+}
+
+// Init
+buildSelector();
+buildDijkTable({},null,new Set());
+renderVal({},null,new Set(),new Set());
+</script>
+</body>
+</html>
