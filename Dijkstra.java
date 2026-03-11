@@ -48,14 +48,15 @@ public class Dijkstra {
                 }
             }
 
-            // Schleife abbrechen, sobald man beim Zielknoten angekommen ist, da man dann
-            // den kürzesten Pfad zum Zielknoten gefunden hat
+            //Abbrechen, falls zielknoten unerreichbar ist (z. B. Graph hängt nicht zusammen)
             if (minPfad.getDistance() == Integer.MAX_VALUE) {
                 return null; // Alle verbleibenden unerreichbaren Knoten haben den Abstand Integer.MAX_VALUE,
                              // d.h. wenn der minimale Pfad diesen Abstand hat, ist der Zielknoten
                              // unerreichbar
             }
-
+            
+            // Schleife abbrechen, sobald man beim Zielknoten angekommen ist, da man dann
+            // den kürzesten Pfad zum Zielknoten gefunden hat
             if (minPfad.getV().getID().equals(endID)) {
                 return minPfad; // Zielknoten erreicht, minimaler Pfad zum Zielknoten gefunden
             }
